@@ -1,5 +1,5 @@
 use x11rb::{connect,connection::Connection};
-use x11rb::protocol::xproto::{EventMask,ConnectionExt,ChangeWindowAttributesAux};
+use x11rb::protocol::{xproto::*,Event};
 
 fn main() {
     let (conn,screen_num) = connect(None).unwrap();
@@ -25,5 +25,14 @@ fn main() {
     loop {
         let event = conn.wait_for_event().unwrap();
         println!("Event {:?}",event);
+
+        match event {
+            Event::MapRequest(ev) => {
+                println!("New window id is {}",ev.window);
+                conn.map_window(ev.window).unwrap();
+                conn.flush().unwrap();
+            }
+            _ => {}
+        }
     }
 }
