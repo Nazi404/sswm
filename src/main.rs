@@ -1,6 +1,8 @@
 use x11rb::protocol::{xproto::*, Event};
 use x11rb::{connect, connection::Connection};
 
+
+// _______________________________
 fn arrange(conn: &impl Connection, screen: &Screen, windows: &Vec<Window>) {
     let n = windows.len();
     if n == 0 {
@@ -53,6 +55,46 @@ fn arrange(conn: &impl Connection, screen: &Screen, windows: &Vec<Window>) {
     conn.flush().unwrap();
 }
 
+// _______________________________
+
+fn tiling(
+    conn :&Connection,
+    windows:&Window,
+    screen:&Screen
+    ) {
+
+    let len = windows.len();
+    if len == 0 {
+        return;
+    }
+
+    let width = window.width_in_pixels as u32;
+    let height = window.height_in_pixels as u32;
+
+    if len == 1 {
+        conn.configure_window(
+            ConfigWindowAux::new()
+            .x(0)
+            .y(0)
+            .width(width)
+            .height(height)
+        ).unwrap();
+    }
+    else {
+        let master_w = width / 2;
+
+        conn.configure_window().unwrap(
+
+            ConfigWindowAux::new()
+            .x(0)
+            .y(0)
+            .width(master_w)
+            .height(height)
+        );
+    }
+
+}
+
 fn main() {
     let mut windows: Vec<Window> = Vec::new();
     let mut focused: Option<Window> = None;
@@ -86,7 +128,7 @@ fn main() {
                 windows.push(ev.window);
                 focused = Some(ev.window);
 
-                arrange(&conn,screen,&windows);
+                arrange(&conn,&screen,&windows);
                 conn.map_window(ev.window).unwrap();
                 conn.flush().unwrap();
             }
