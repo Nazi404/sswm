@@ -1,79 +1,24 @@
 use x11rb::protocol::{xproto::*, Event};
 use x11rb::{connect, connection::Connection};
 
+fn tiling(
+    conn:&impl Connection,
+    screen: &Screen,
+    windows: &Vec<Window>
+    ) {
 
-// _______________________________
-fn arrange(conn: &impl Connection, screen: &Screen, windows: &Vec<Window>) {
     let n = windows.len();
+    let width = screen.width_in_pixels as u32;
+    let height = screen.height_in_pixels as u32;
+
     if n == 0 {
         return;
     }
-
-    let width = screen.width_in_pixels as u32;
-    let height = screen.height_in_pixels as u32;
 
     if n == 1 {
         conn.configure_window(
             windows[0],
             &ConfigureWindowAux::new()
-                .x(0)
-                .y(0)
-                .width(width)
-                .height(height),
-        )
-        .unwrap();
-    } else {
-        let master_w = width / 2;
-
-        // master
-        conn.configure_window(
-            windows[0],
-            &ConfigureWindowAux::new()
-                .x(0)
-                .y(0)
-                .width(master_w)
-                .height(height),
-        )
-        .unwrap();
-
-        // stack
-        let stack_h = height / (n as u32 - 1);
-
-        for (i, win) in windows.iter().skip(1).enumerate() {
-            conn.configure_window(
-                *win,
-                &ConfigureWindowAux::new()
-                    .x(master_w as i32)
-                    .y((i as u32 * stack_h) as i32)
-                    .width(width - master_w)
-                    .height(stack_h),
-            )
-            .unwrap();
-        }
-    }
-
-    conn.flush().unwrap();
-}
-
-// _______________________________
-
-fn tiling(
-    conn :&Connection,
-    windows:&Window,
-    screen:&Screen
-    ) {
-
-    let len = windows.len();
-    if len == 0 {
-        return;
-    }
-
-    let width = window.width_in_pixels as u32;
-    let height = window.height_in_pixels as u32;
-
-    if len == 1 {
-        conn.configure_window(
-            ConfigWindowAux::new()
             .x(0)
             .y(0)
             .width(width)
@@ -81,18 +26,32 @@ fn tiling(
         ).unwrap();
     }
     else {
+
         let master_w = width / 2;
 
-        conn.configure_window().unwrap(
-
-            ConfigWindowAux::new()
+        conn.configure_window(
+            windows[0],
+            &ConfigureWindowAux::new()
             .x(0)
             .y(0)
             .width(master_w)
             .height(height)
-        );
+        ).unwrap();
+
+        let stack_h = height / (n as u32 - 1);
+        for (i, win) in windows.iter().skip(1).enumerate() {
+            conn.configure_window(
+                *win,
+                &ConfigureWindowAux::new()
+                .x(master_w as i32)
+                .y((i as u32 * stack_h) as i32)
+                .width(width - master_w)
+                .height(stack_h)
+            ).unwrap();
+        }
     }
 
+    conn.flush().unwrap();
 }
 
 fn main() {
@@ -128,9 +87,9 @@ fn main() {
                 windows.push(ev.window);
                 focused = Some(ev.window);
 
-                arrange(&conn,&screen,&windows);
                 conn.map_window(ev.window).unwrap();
                 conn.flush().unwrap();
+                tiling(&conn,&screen,&windows);
             }
             Event::ConfigureRequest(ev) => {
                 println!("Configure request for window 0x{:x}", ev.window);
@@ -138,6 +97,9 @@ fn main() {
                 let aux = ConfigureWindowAux::from_configure_request(&ev);
                 conn.configure_window(ev.window, &aux).unwrap();
                 conn.flush().unwrap();
+                if windows.contains(&ev.window) {
+                    tiling(&conn,&screen,&windows);
+                }
             }
             _ => {}
         }
